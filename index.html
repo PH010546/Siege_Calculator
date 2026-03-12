@@ -178,6 +178,10 @@
             部隊整備所需總時 (含行軍)：<span id="recoveryDisplay" class="highlight">0</span> 分鐘
         </div>
         
+        <div id="arrivalStaminaInfo" class="result-item" style="display: none; color: #1a1a1a;">
+            預計到達時體力：<span id="arrivalStaminaDisplay" class="highlight" style="font-size: 20px;">0</span> / 120
+        </div>
+
         <div class="result-item" style="border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px;">
             <strong style="font-size: 20px;">建議最晚出發時間：</strong><br>
             <span id="departureDisplay" class="highlight" style="font-size: 32px;">00:00</span>
@@ -221,15 +225,18 @@
         
         // 2. 體力恢復所需時間
         let staminaMinutesNeeded = 0;
+        let currentStamina = 0;
         const hasStaminaInput = currentStaminaRaw !== "";
         if (hasStaminaInput) {
-            const currentStamina = Math.min(120, Math.max(0, parseInt(currentStaminaRaw)));
+            currentStamina = Math.min(120, Math.max(0, parseInt(currentStaminaRaw)));
             staminaMinutesNeeded = (120 - currentStamina) * 3;
         }
 
         // 3. 根據部隊類型決定主要計算邏輯
         let finalMinutesNeeded = moraleMinutesNeeded;
         let showStaminaTip = false;
+        let showArrivalStamina = false;
+        let arrivalStaminaValue = 120;
         let staminaFullDepartureTime = "";
 
         const [hours, minutes] = siegeTimeStr.split(':').map(Number);
@@ -237,16 +244,27 @@
         siegeDate.setHours(hours, minutes, 0, 0);
 
         if (unitType === 'siege') {
-            // 器械：強制計算體力
+            // 器械：強制計算體力，到達時一定是 120
             finalMinutesNeeded = Math.max(moraleMinutesNeeded, staminaMinutesNeeded);
+            showArrivalStamina = true;
+            arrivalStaminaValue = 120;
         } else {
-            // 主力：主結果算士氣，若有填體力則額外顯示提示
+            // 主力：主結果算士氣
             finalMinutesNeeded = moraleMinutesNeeded;
             if (hasStaminaInput) {
+                // 計算到達時體力 = 目前體力 + (總時間 / 3)
+                arrivalStaminaValue = Math.min(120, currentStamina + Math.floor(finalMinutesNeeded / 3));
+                showArrivalStamina = true;
+
+                // 額外計算回滿體力時間
                 const totalWithStamina = Math.max(moraleMinutesNeeded, staminaMinutesNeeded);
                 const staminaFullDate = new Date(siegeDate.getTime() - totalWithStamina * 60000);
                 staminaFullDepartureTime = `${staminaFullDate.getHours().toString().padStart(2, '0')}:${staminaFullDate.getMinutes().toString().padStart(2, '0')}`;
-                showStaminaTip = true;
+                
+                // 只有在目前體力不到 120 的情況下才顯示回滿建議
+                if (arrivalStaminaValue < 120) {
+                    showStaminaTip = true;
+                }
             }
         }
 
@@ -259,6 +277,16 @@
         document.getElementById('recoveryDisplay').innerText = finalMinutesNeeded;
         document.getElementById('departureDisplay').innerText = `${depHours}:${depMinutes}`;
         
+        // 到達體力顯示
+        const arrivalBox = document.getElementById('arrivalStaminaInfo');
+        if (showArrivalStamina) {
+            document.getElementById('arrivalStaminaDisplay').innerText = arrivalStaminaValue;
+            arrivalBox.style.display = 'block';
+        } else {
+            arrivalBox.style.display = 'none';
+        }
+
+        // 回滿建議顯示
         const tipBox = document.getElementById('staminaTip');
         if (showStaminaTip) {
             document.getElementById('staminaTipText').innerText = `💡 如要回滿體力建議 ${staminaFullDepartureTime} 出發`;
