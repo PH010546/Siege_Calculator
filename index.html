@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三國志：行軍攻城計策工具</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap');
+
+        :root {
+            --primary-color: #8b0000; /* 深血紅 */
+            --gold-color: #d4af37;    /* 金色 */
+            --paper-bg: #f4e4bc;      /* 羊皮紙色 */
+            --ink-black: #1a1a1a;     /* 水墨黑 */
+        }
+
+        body {
+            background-color: #2c2c2c;
+            font-family: 'Noto Serif TC', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .scroll-container {
+            background-color: var(--paper-bg);
+            background-image: url('https://www.transparenttextures.com/patterns/papyrus.png');
+            border: 10px double var(--primary-color);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 100px rgba(139, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            border-radius: 5px;
+        }
+
+        /* 裝飾性邊角 */
+        .scroll-container::before, .scroll-container::after {
+            content: "⚔️";
+            position: absolute;
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+        .scroll-container::before { top: 10px; left: 10px; }
+        .scroll-container::after { bottom: 10px; right: 10px; }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+            font-size: 28px;
+            letter-spacing: 5px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--ink-black);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #999;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            font-size: 18px;
+            box-sizing: border-box;
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: var(--gold-color);
+            border: 2px solid var(--gold-color);
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 10px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #a00000;
+            transform: scale(1.02);
+        }
+
+        .result-box {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px dashed var(--primary-color);
+            background: rgba(139, 0, 0, 0.05);
+            display: none;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            color: var(--primary-color);
+            font-weight: 900;
+            font-size: 22px;
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="scroll-container">
+    <h1>攻城計策工具</h1>
+    
+    <div class="input-group">
+        <label>行軍時間 (分鐘)</label>
+        <input type="number" id="marchTime" placeholder="例如：15" min="0">
+    </div>
+
+    <div class="input-group">
+        <label>行軍距離</label>
+        <input type="number" id="distance" placeholder="例如：5" min="0">
+    </div>
+
+    <div class="input-group">
+        <label>部隊類型</label>
+        <div style="display: flex; gap: 20px; font-size: 18px; padding: 10px 0;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="unitType" value="main" checked style="width: auto; margin-right: 8px;"> 主力
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="unitType" value="siege" style="width: auto; margin-right: 8px;"> 器械
+            </label>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label id="staminaLabel">目前體力 (上限120)</label>
+        <input type="number" id="currentStamina" placeholder="例如：100" min="0" max="120">
+    </div>
+
+    <div class="input-group">
+        <label>預計攻城時間 (HH:MM)</label>
+        <input type="time" id="siegeTime" value="12:00">
+    </div>
+
+    <button onclick="calculate()">運籌帷幄</button>
+
+    <div id="result" class="result-box">
+        <div id="mainRecoveryInfo" class="result-item">
+            部隊整備所需總時 (含行軍)：<span id="recoveryDisplay" class="highlight">0</span> 分鐘
+        </div>
+        
+        <div class="result-item" style="border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px;">
+            <strong style="font-size: 20px;">建議最晚出發時間：</strong><br>
+            <span id="departureDisplay" class="highlight" style="font-size: 32px;">00:00</span>
+        </div>
+
+        <div id="staminaTip" class="result-item" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-left: 4px solid var(--primary-color); font-size: 16px;">
+            <span id="staminaTipText"></span>
+        </div>
+    </div>
+
+    <div class="footer">
+        軍情緊急，請將士們準時出發！
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        const marchTime = parseInt(document.getElementById('marchTime').value) || 0;
+        let distance = parseInt(document.getElementById('distance').value) || 0;
+        const currentStaminaRaw = document.getElementById('currentStamina').value;
+        const unitType = document.querySelector('input[name="unitType"]:checked').value;
+        const siegeTimeStr = document.getElementById('siegeTime').value;
+
+        if (!siegeTimeStr) {
+            alert("請輸入攻城時間！");
+            return;
+        }
+
+        if (unitType === 'siege' && currentStaminaRaw === "") {
+            alert("器械部隊體力為必填！");
+            return;
+        }
+
+        // 行軍距離上限為 100
+        if (distance > 100) {
+            distance = 100;
+        }
+
+        // 1. 士氣恢復所需基礎時間: 行軍時間 + 距離 * 2
+        const moraleMinutesNeeded = marchTime + (distance * 2);
+        
+        // 2. 體力恢復所需時間
+        let staminaMinutesNeeded = 0;
+        const hasStaminaInput = currentStaminaRaw !== "";
+        if (hasStaminaInput) {
+            const currentStamina = Math.min(120, Math.max(0, parseInt(currentStaminaRaw)));
+            staminaMinutesNeeded = (120 - currentStamina) * 3;
+        }
+
+        // 3. 根據部隊類型決定主要計算邏輯
+        let finalMinutesNeeded = moraleMinutesNeeded;
+        let showStaminaTip = false;
+        let staminaFullDepartureTime = "";
+
+        const [hours, minutes] = siegeTimeStr.split(':').map(Number);
+        const siegeDate = new Date();
+        siegeDate.setHours(hours, minutes, 0, 0);
+
+        if (unitType === 'siege') {
+            // 器械：強制計算體力
+            finalMinutesNeeded = Math.max(moraleMinutesNeeded, staminaMinutesNeeded);
+        } else {
+            // 主力：主結果算士氣，若有填體力則額外顯示提示
+            finalMinutesNeeded = moraleMinutesNeeded;
+            if (hasStaminaInput) {
+                const totalWithStamina = Math.max(moraleMinutesNeeded, staminaMinutesNeeded);
+                const staminaFullDate = new Date(siegeDate.getTime() - totalWithStamina * 60000);
+                staminaFullDepartureTime = `${staminaFullDate.getHours().toString().padStart(2, '0')}:${staminaFullDate.getMinutes().toString().padStart(2, '0')}`;
+                showStaminaTip = true;
+            }
+        }
+
+        // 4. 計算主要出發時間
+        let departureDate = new Date(siegeDate.getTime() - finalMinutesNeeded * 60000);
+        const depHours = departureDate.getHours().toString().padStart(2, '0');
+        const depMinutes = departureDate.getMinutes().toString().padStart(2, '0');
+        
+        // 5. 顯示結果
+        document.getElementById('recoveryDisplay').innerText = finalMinutesNeeded;
+        document.getElementById('departureDisplay').innerText = `${depHours}:${depMinutes}`;
+        
+        const tipBox = document.getElementById('staminaTip');
+        if (showStaminaTip) {
+            document.getElementById('staminaTipText').innerText = `💡 如要回滿體力建議 ${staminaFullDepartureTime} 出發`;
+            tipBox.style.display = 'block';
+        } else {
+            tipBox.style.display = 'none';
+        }
+        
+        document.getElementById('result').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
